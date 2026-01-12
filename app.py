@@ -263,53 +263,52 @@ Keep responses concise but comprehensive, typically 200-400 words unless detaile
     return base_prompt
 
 @st.cache_data(show_spinner=False)
-def get_ai_response(user_message, feature=None, _chat_history=None):
-    """Generate AI response using Gemini API"""
+def get_ai_response(user_message, feature=None, chat_history=None):
+    """
+    Sends a message to Gemini 1.5 and returns the AI response.
+    Includes system instructions and recent chat context.
+    """
     try:
-        # Build conversation history
+        # 1️⃣ Create conversation container
         conversation = []
-        
-        # Add system context
+
+        # 2️⃣ Add system instructions (acts like a system prompt)
         system_prompt = generate_system_prompt(feature)
         conversation.append({
             "role": "user",
             "parts": [system_prompt]
         })
+
+        # 3️⃣ Force Gemini to accept the role (important)
         conversation.append({
             "role": "model",
-            "parts": ["I understand. I'm AgroNova, your agricultural assistant. I'll provide practical, region-specific farming advice with clear formatting and actionable steps."]
+            "parts": [
+                "Understood. I will act as AgroNova, an expert agricultural assistant "
+                "providing clear, practical, and region-specific farming advice."
+            ]
         })
-        
-        # Add chat history if provided (last 6 messages for context)
-        if _chat_history:
-            for msg in _chat_history[-6:]:
-                role = "user" if msg["role"] == "user" else "model"
+
+        # 4️⃣ Add recent chat history (memory)
+        if chat_history:
+            for msg in chat_history[-6:]:  # keep last 6 messages only
                 conversation.append({
-                    "role": role,
+                    "role": "user" if msg["role"] == "user" else "model",
                     "parts": [msg["content"]]
                 })
-        
-        # Start chat and send message
+
+        # 5️⃣ Start chat session with Gemini
         chat = model.start_chat(history=conversation)
+
+        # 6️⃣ Send the new user message
         response = chat.send_message(user_message)
-        
+
+        # 7️⃣ Return clean text output
         return response.text
-        
+
     except Exception as e:
-        error_msg = f"""**Error Processing Request**
+        return f"""
+❌ **Error Generating Re**
 
-I encountered an issue generating a response. This could be due to:
-- API key not configured properly
-- Network connectivity issues
-- API rate limits
-
-**Please ensure:**
-1. Your Gemini API key is correctly set in Streamlit secrets
-2. You have an active internet connection
-3. Your API key has sufficient quota
-
-Error details: {str(e)}"""
-        return error_msg
 
 # =============================================================================
 # UI COMPONENTS
