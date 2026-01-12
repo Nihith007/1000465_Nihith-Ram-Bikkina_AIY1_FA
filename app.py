@@ -1,29 +1,120 @@
 """
-Smart Farming Assistant - Python Flask Application
+Smart Farming Assistant - Streamlit Application
 Powered by Google Gemini AI
 
 Installation:
-pip install flask google-generativeai python-dotenv
+pip install streamlit google-generativeai
 
 Usage:
-1. Add your Gemini API key in the code where it says app_key
-2. Run: python app.py
-3. Open browser: http://localhost:5000
+1. Add your Gemini API key to Streamlit secrets (.streamlit/secrets.toml)
+2. Run: streamlit run app.py
+
+Streamlit Secrets Setup:
+Create .streamlit/secrets.toml file with:
+GEMINI_API_KEY = "your_api_key_here"
 """
 
-from flask import Flask, render_template_string, request, jsonify
+import streamlit as st
 import google.generativeai as genai
 from datetime import datetime
-import os
-import json
-
-app = Flask(__name__)
 
 # =============================================================================
-# CONFIGURATION - ADD YOUR API KEY HERE
+# PAGE CONFIGURATION
 # =============================================================================
-app_key = "YOUR_GEMINI_API_KEY_HERE"  # Replace with your actual API key
-genai.configure(api_key=app_key)
+st.set_page_config(
+    page_title="AgroNova - Smart Farming Assistant",
+    page_icon="🌾",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
+# Custom CSS
+st.markdown("""
+<style>
+    .main-header {
+        background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+        padding: 1.5rem;
+        border-radius: 10px;
+        margin-bottom: 2rem;
+        color: white;
+    }
+    .feature-card {
+        padding: 1rem;
+        border-radius: 8px;
+        border: 2px solid #e5e7eb;
+        cursor: pointer;
+        transition: all 0.3s;
+        margin-bottom: 0.5rem;
+    }
+    .feature-card:hover {
+        border-color: #10b981;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    .feature-card-selected {
+        border-color: #059669;
+        background-color: #ecfdf5;
+    }
+    .user-message {
+        background-color: #059669;
+        color: white;
+        padding: 1rem;
+        border-radius: 1rem;
+        margin: 0.5rem 0;
+    }
+    .assistant-message {
+        background-color: #f3f4f6;
+        color: #1f2937;
+        padding: 1rem;
+        border-radius: 1rem;
+        margin: 0.5rem 0;
+    }
+    .sample-prompt-btn {
+        background-color: white;
+        border: 1px solid #d1d5db;
+        padding: 0.5rem 1rem;
+        border-radius: 0.5rem;
+        margin: 0.25rem;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    .sample-prompt-btn:hover {
+        border-color: #10b981;
+        background-color: #ecfdf5;
+    }
+    .stButton>button {
+        background-color: #059669;
+        color: white;
+    }
+    .stButton>button:hover {
+        background-color: #047857;
+    }
+</style>
+""", unsafe_allow_html=True)
+
+# =============================================================================
+# CONFIGURATION - USING STREAMLIT SECRETS
+# =============================================================================
+try:
+    # Access API key from Streamlit secrets
+    app_key = st.secrets["GEMINI_API_KEY"]
+    genai.configure(api_key=app_key)
+except Exception as e:
+    st.error("""
+    ⚠️ **Gemini API Key Not Found!**
+    
+    Please add your API key to Streamlit secrets:
+    
+    **For local development:**
+    1. Create `.streamlit/secrets.toml` file
+    2. Add: `GEMINI_API_KEY = "your_api_key_here"`
+    
+    **For Streamlit Cloud:**
+    1. Go to App Settings → Secrets
+    2. Add: `GEMINI_API_KEY = "your_api_key_here"`
+    
+    Get your API key at: https://makersuite.google.com/app/apikey
+    """)
+    st.stop()
 
 # Configure the Gemini model
 generation_config = {
@@ -45,38 +136,33 @@ model = genai.GenerativeModel(
 FEATURES = [
     {
         "id": "crop-recommendation",
-        "title": "Crop Recommendation",
+        "title": "🌾 Crop Recommendation",
         "description": "Get suggestions for crops based on your location, season, and soil type",
-        "icon": "🌾",
-        "color": "bg-green-100"
+        "color": "#d1fae5"
     },
     {
         "id": "pest-disease",
-        "title": "Pest & Disease Management",
+        "title": "🐛 Pest & Disease Management",
         "description": "Identify and treat crop diseases and pest infestations",
-        "icon": "🐛",
-        "color": "bg-red-100"
+        "color": "#fee2e2"
     },
     {
         "id": "weather-alerts",
-        "title": "Weather-Based Alerts",
+        "title": "🌦️ Weather-Based Alerts",
         "description": "Get weather forecasts and farming advice based on conditions",
-        "icon": "🌦️",
-        "color": "bg-blue-100"
+        "color": "#dbeafe"
     },
     {
         "id": "soil-fertilizer",
-        "title": "Soil & Fertilizer Advice",
+        "title": "🌱 Soil & Fertilizer Advice",
         "description": "Receive recommendations for soil treatment and fertilization",
-        "icon": "🌱",
-        "color": "bg-amber-100"
+        "color": "#fef3c7"
     },
     {
         "id": "sustainable-farming",
-        "title": "Sustainable Farming Tips",
+        "title": "♻️ Sustainable Farming Tips",
         "description": "Learn eco-friendly and organic farming practices",
-        "icon": "♻️",
-        "color": "bg-emerald-100"
+        "color": "#d1fae5"
     }
 ]
 
@@ -112,6 +198,25 @@ SAMPLE_PROMPTS = {
         "Companion planting guide for vegetables"
     ]
 }
+
+# =============================================================================
+# SESSION STATE INITIALIZATION
+# =============================================================================
+
+if "messages" not in st.session_state:
+    st.session_state.messages = [
+        {
+            "role": "assistant",
+            "content": """Welcome to **AgroNova Smart Farming Assistant**! 🌾
+
+I'm here to help farmers worldwide with AI-powered agricultural advice. Ask me about crops, pests, weather, soil, or sustainable farming practices in your region.
+
+**Select a feature from the sidebar or ask me anything!**"""
+        }
+    ]
+
+if "selected_feature" not in st.session_state:
+    st.session_state.selected_feature = None
 
 # =============================================================================
 # AI RESPONSE GENERATION
@@ -157,7 +262,8 @@ Keep responses concise but comprehensive, typically 200-400 words unless detaile
         return base_prompt + feature_contexts[feature]
     return base_prompt
 
-def get_ai_response(user_message, feature=None, chat_history=None):
+@st.cache_data(show_spinner=False)
+def get_ai_response(user_message, feature=None, _chat_history=None):
     """Generate AI response using Gemini API"""
     try:
         # Build conversation history
@@ -174,9 +280,9 @@ def get_ai_response(user_message, feature=None, chat_history=None):
             "parts": ["I understand. I'm AgroNova, your agricultural assistant. I'll provide practical, region-specific farming advice with clear formatting and actionable steps."]
         })
         
-        # Add chat history if provided
-        if chat_history:
-            for msg in chat_history[-6:]:  # Keep last 6 messages for context
+        # Add chat history if provided (last 6 messages for context)
+        if _chat_history:
+            for msg in _chat_history[-6:]:
                 role = "user" if msg["role"] == "user" else "model"
                 conversation.append({
                     "role": role,
@@ -190,9 +296,7 @@ def get_ai_response(user_message, feature=None, chat_history=None):
         return response.text
         
     except Exception as e:
-        error_msg = f"Error generating response: {str(e)}"
-        print(error_msg)
-        return f"""**Error Processing Request**
+        error_msg = f"""**Error Processing Request**
 
 I encountered an issue generating a response. This could be due to:
 - API key not configured properly
@@ -200,405 +304,163 @@ I encountered an issue generating a response. This could be due to:
 - API rate limits
 
 **Please ensure:**
-1. Your Gemini API key is correctly set in the code (app_key variable)
+1. Your Gemini API key is correctly set in Streamlit secrets
 2. You have an active internet connection
 3. Your API key has sufficient quota
 
 Error details: {str(e)}"""
+        return error_msg
 
 # =============================================================================
-# HTML TEMPLATE
+# UI COMPONENTS
 # =============================================================================
 
-HTML_TEMPLATE = """
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AgroNova - Smart Farming Assistant</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/lucide@latest"></script>
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <style>
-        .prose { max-width: none; }
-        .prose p { margin-bottom: 0.5rem; }
-        .prose ul, .prose ol { margin-left: 1.5rem; margin-bottom: 0.5rem; }
-        .prose li { margin-bottom: 0.25rem; }
-        .prose strong { font-weight: 600; color: #111827; }
-        .prose h1, .prose h2, .prose h3 { color: #111827; font-weight: bold; }
-        .chat-container { height: calc(100vh - 280px); min-height: 500px; }
-        .loading-dots::after {
-            content: '...';
-            animation: loading 1.5s infinite;
-        }
-        @keyframes loading {
-            0%, 20% { content: '.'; }
-            40% { content: '..'; }
-            60%, 100% { content: '...'; }
-        }
-    </style>
-</head>
-<body class="min-h-screen bg-gradient-to-br from-green-50 via-white to-blue-50">
-    <!-- Header -->
-    <header class="bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-            <div class="flex items-center justify-between">
-                <div class="flex items-center gap-3">
-                    <div class="bg-green-600 p-2 rounded-lg">
-                        <i data-lucide="sprout" class="w-6 h-6 text-white"></i>
-                    </div>
-                    <div>
-                        <h1 class="text-xl sm:text-2xl font-bold text-gray-900">AgroNova</h1>
-                        <p class="text-xs sm:text-sm text-gray-600">Smart Farming Assistant</p>
-                    </div>
-                </div>
-                <div class="hidden sm:flex items-center gap-2">
-                    <span class="bg-green-50 text-green-700 border border-green-300 px-3 py-1 rounded-full text-sm">
-                        Powered by Gemini AI
-                    </span>
-                </div>
-            </div>
-        </div>
-    </header>
-
-    <!-- Main Content -->
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            <!-- Sidebar - Features -->
-            <aside class="lg:col-span-3 space-y-4">
-                <div class="bg-white rounded-lg shadow-md p-4">
-                    <h2 class="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                        <span class="text-green-600">📋</span>
-                        Features
-                    </h2>
-                    <div id="features-container" class="space-y-2">
-                        <!-- Features will be inserted here -->
-                    </div>
-                    <button id="clear-feature" class="w-full mt-3 px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded hidden">
-                        Clear Selection
-                    </button>
-                </div>
-
-                <div class="bg-gradient-to-br from-green-50 to-blue-50 border border-green-200 rounded-lg p-4">
-                    <h3 class="font-semibold text-gray-900 mb-2 text-sm">🌍 Global Coverage</h3>
-                    <p class="text-xs text-gray-700 leading-relaxed">
-                        Get region-specific advice for farming practices worldwide. Supporting farmers in India, Kenya, Brazil, Italy, and more!
-                    </p>
-                </div>
-            </aside>
-
-            <!-- Main Chat Area -->
-            <main class="lg:col-span-9 space-y-4">
-                <!-- Chat Messages -->
-                <div class="bg-white shadow-lg rounded-lg overflow-hidden flex flex-col chat-container">
-                    <div id="chat-messages" class="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
-                        <div class="flex gap-3">
-                            <div class="flex-shrink-0 w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
-                                <i data-lucide="bot" class="w-6 h-6 text-green-600"></i>
-                            </div>
-                            <div class="max-w-[85%] sm:max-w-[80%] rounded-2xl px-4 py-3 bg-gray-100 text-gray-800">
-                                <div class="prose prose-sm">
-                                    <p>Welcome to <strong>AgroNova Smart Farming Assistant</strong>! 🌾</p>
-                                    <p>I'm here to help farmers worldwide with AI-powered agricultural advice. Ask me about crops, pests, weather, soil, or sustainable farming practices in your region.</p>
-                                    <p><strong>Select a feature below or ask me anything!</strong></p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Input Area -->
-                    <div class="border-t border-gray-200 p-4 bg-gray-50">
-                        <div class="flex gap-2">
-                            <textarea 
-                                id="user-input" 
-                                placeholder="Ask about crops, pests, weather, soil, or sustainable farming..."
-                                class="flex-1 min-h-[60px] max-h-[120px] resize-none bg-white border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-green-500"
-                                rows="2"
-                            ></textarea>
-                            <button 
-                                id="send-btn"
-                                class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg self-end disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                                <i data-lucide="send" class="w-5 h-5"></i>
-                            </button>
-                        </div>
-                        <p class="text-xs text-gray-500 mt-2">Press Enter to send, Shift + Enter for new line</p>
-                    </div>
-                </div>
-
-                <!-- Sample Prompts -->
-                <div class="bg-white rounded-lg p-4">
-                    <div class="flex items-center gap-2 mb-3">
-                        <i data-lucide="sparkles" class="w-4 h-4 text-green-600"></i>
-                        <h3 class="font-semibold text-gray-900 text-sm">Try These Sample Questions</h3>
-                    </div>
-                    <div id="sample-prompts" class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                        <!-- Sample prompts will be inserted here -->
-                    </div>
-                </div>
-            </main>
-        </div>
+def render_header():
+    """Render the header"""
+    st.markdown("""
+    <div class="main-header">
+        <h1 style="margin:0; font-size: 2rem;">🌾 AgroNova</h1>
+        <p style="margin:0; opacity: 0.9;">Smart Farming Assistant powered by Gemini AI</p>
     </div>
+    """, unsafe_allow_html=True)
 
-    <!-- Footer -->
-    <footer class="bg-white border-t border-gray-200 mt-8">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-            <p class="text-center text-xs sm:text-sm text-gray-600">
-                🌾 Supporting UN SDG 2 (Zero Hunger) & SDG 13 (Climate Action) | Built with Python Flask & Gemini AI
-            </p>
-        </div>
-    </footer>
-
-    <script>
-        // Initialize Lucide icons
-        lucide.createIcons();
-
-        // State management
-        let selectedFeature = null;
-        let chatHistory = [];
-        let isLoading = false;
-
-        // Features data
-        const features = {{ features | tojson }};
-        const samplePrompts = {{ sample_prompts | tojson }};
-
-        // Initialize features
-        function initFeatures() {
-            const container = document.getElementById('features-container');
-            features.forEach(feature => {
-                const card = document.createElement('div');
-                card.className = 'p-3 cursor-pointer transition-all hover:shadow-md border-2 border-gray-200 hover:border-green-300 rounded-lg';
-                card.innerHTML = `
-                    <div class="flex items-start gap-3">
-                        <div class="${feature.color} p-2 rounded-lg text-2xl flex-shrink-0">${feature.icon}</div>
-                        <div class="flex-1 min-w-0">
-                            <h3 class="font-semibold text-sm text-gray-900 mb-1">${feature.title}</h3>
-                            <p class="text-xs text-gray-600 line-clamp-2">${feature.description}</p>
-                        </div>
-                    </div>
-                `;
-                card.addEventListener('click', () => selectFeature(feature.id, card));
-                container.appendChild(card);
-            });
-        }
-
-        // Select feature
-        function selectFeature(featureId, element) {
-            const allCards = document.querySelectorAll('#features-container > div');
-            allCards.forEach(card => {
-                card.className = 'p-3 cursor-pointer transition-all hover:shadow-md border-2 border-gray-200 hover:border-green-300 rounded-lg';
-            });
-            
-            selectedFeature = featureId;
-            element.className = 'p-3 cursor-pointer transition-all hover:shadow-md border-2 border-green-600 bg-green-50 shadow-md rounded-lg';
-            document.getElementById('clear-feature').classList.remove('hidden');
-        }
-
-        // Clear feature selection
-        document.getElementById('clear-feature').addEventListener('click', () => {
-            selectedFeature = null;
-            const allCards = document.querySelectorAll('#features-container > div');
-            allCards.forEach(card => {
-                card.className = 'p-3 cursor-pointer transition-all hover:shadow-md border-2 border-gray-200 hover:border-green-300 rounded-lg';
-            });
-            document.getElementById('clear-feature').classList.add('hidden');
-        });
-
-        // Initialize sample prompts
-        function initSamplePrompts() {
-            const container = document.getElementById('sample-prompts');
-            Object.values(samplePrompts).flat().forEach(prompt => {
-                const btn = document.createElement('button');
-                btn.className = 'text-left h-auto py-2 px-3 border border-gray-300 rounded-lg text-xs sm:text-sm hover:bg-green-50 hover:border-green-300 whitespace-normal';
-                btn.textContent = prompt;
-                btn.addEventListener('click', () => sendMessage(prompt));
-                container.appendChild(btn);
-            });
-        }
-
-        // Add message to chat
-        function addMessage(role, content) {
-            const messagesContainer = document.getElementById('chat-messages');
-            const messageDiv = document.createElement('div');
-            messageDiv.className = `flex gap-3 ${role === 'user' ? 'justify-end' : ''}`;
-            
-            if (role === 'user') {
-                messageDiv.innerHTML = `
-                    <div class="max-w-[85%] sm:max-w-[80%] rounded-2xl px-4 py-3 bg-green-600 text-white">
-                        <div class="whitespace-pre-wrap text-sm sm:text-base">${escapeHtml(content)}</div>
-                    </div>
-                    <div class="flex-shrink-0 w-10 h-10 rounded-full bg-green-600 flex items-center justify-center">
-                        <i data-lucide="user" class="w-6 h-6 text-white"></i>
-                    </div>
-                `;
-            } else {
-                const htmlContent = marked.parse(content);
-                messageDiv.innerHTML = `
-                    <div class="flex-shrink-0 w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
-                        <i data-lucide="bot" class="w-6 h-6 text-green-600"></i>
-                    </div>
-                    <div class="max-w-[85%] sm:max-w-[80%] rounded-2xl px-4 py-3 bg-gray-100 text-gray-800">
-                        <div class="prose prose-sm">${htmlContent}</div>
-                    </div>
-                `;
-            }
-            
-            messagesContainer.appendChild(messageDiv);
-            lucide.createIcons();
-            messagesContainer.scrollTop = messagesContainer.scrollHeight;
-        }
-
-        // Show loading indicator
-        function showLoading() {
-            const messagesContainer = document.getElementById('chat-messages');
-            const loadingDiv = document.createElement('div');
-            loadingDiv.id = 'loading-indicator';
-            loadingDiv.className = 'flex items-center gap-2 text-gray-500';
-            loadingDiv.innerHTML = `
-                <i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i>
-                <span class="text-sm">Thinking<span class="loading-dots"></span></span>
-            `;
-            messagesContainer.appendChild(loadingDiv);
-            lucide.createIcons();
-            messagesContainer.scrollTop = messagesContainer.scrollHeight;
-        }
-
-        // Remove loading indicator
-        function removeLoading() {
-            const loadingDiv = document.getElementById('loading-indicator');
-            if (loadingDiv) loadingDiv.remove();
-        }
-
-        // Send message
-        async function sendMessage(customMessage = null) {
-            if (isLoading) return;
-            
-            const input = document.getElementById('user-input');
-            const message = customMessage || input.value.trim();
-            
-            if (!message) return;
-            
-            // Add user message
-            addMessage('user', message);
-            chatHistory.push({ role: 'user', content: message });
-            
-            if (!customMessage) input.value = '';
-            
-            isLoading = true;
-            document.getElementById('send-btn').disabled = true;
-            showLoading();
-            
-            try {
-                const response = await fetch('/chat', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        message: message,
-                        feature: selectedFeature,
-                        history: chatHistory
-                    })
-                });
-                
-                const data = await response.json();
-                removeLoading();
-                
-                if (data.error) {
-                    addMessage('assistant', `Error: ${data.error}`);
-                } else {
-                    addMessage('assistant', data.response);
-                    chatHistory.push({ role: 'assistant', content: data.response });
-                }
-            } catch (error) {
-                removeLoading();
-                addMessage('assistant', `Error: ${error.message}`);
-            }
-            
-            isLoading = false;
-            document.getElementById('send-btn').disabled = false;
-        }
-
-        // Event listeners
-        document.getElementById('send-btn').addEventListener('click', () => sendMessage());
+def render_sidebar():
+    """Render the sidebar with features"""
+    with st.sidebar:
+        st.markdown("### 📋 Features")
+        st.markdown("Select a feature to get specialized advice:")
         
-        document.getElementById('user-input').addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                sendMessage();
-            }
-        });
+        for feature in FEATURES:
+            is_selected = st.session_state.selected_feature == feature["id"]
+            
+            button_class = "feature-card-selected" if is_selected else ""
+            
+            if st.button(
+                f"{feature['title']}\n{feature['description']}", 
+                key=feature["id"],
+                use_container_width=True,
+                type="primary" if is_selected else "secondary"
+            ):
+                st.session_state.selected_feature = feature["id"]
+                st.rerun()
+        
+        if st.session_state.selected_feature:
+            if st.button("🔄 Clear Selection", use_container_width=True):
+                st.session_state.selected_feature = None
+                st.rerun()
+        
+        st.markdown("---")
+        st.markdown("""
+        ### 🌍 Global Coverage
+        Get region-specific advice for farming practices worldwide. 
+        Supporting farmers in India, Kenya, Brazil, Italy, and more!
+        """)
+        
+        st.markdown("---")
+        st.markdown("""
+        ### ℹ️ About
+        Supporting UN SDG 2 (Zero Hunger) & SDG 13 (Climate Action)
+        
+        Built with Streamlit & Gemini AI
+        """)
 
-        // Utility function
-        function escapeHtml(text) {
-            const map = {
-                '&': '&amp;',
-                '<': '&lt;',
-                '>': '&gt;',
-                '"': '&quot;',
-                "'": '&#039;'
-            };
-            return text.replace(/[&<>"']/g, m => map[m]);
-        }
-
-        // Initialize on load
-        document.addEventListener('DOMContentLoaded', () => {
-            initFeatures();
-            initSamplePrompts();
-        });
-    </script>
-</body>
-</html>
-"""
+def render_sample_prompts():
+    """Render sample prompts"""
+    st.markdown("### ✨ Try These Sample Questions")
+    
+    # Get prompts based on selected feature
+    if st.session_state.selected_feature:
+        prompts = SAMPLE_PROMPTS.get(st.session_state.selected_feature, [])
+    else:
+        # Show all prompts
+        prompts = []
+        for prompt_list in SAMPLE_PROMPTS.values():
+            prompts.extend(prompt_list[:2])  # Take 2 from each category
+    
+    cols = st.columns(2)
+    for idx, prompt in enumerate(prompts[:8]):  # Show max 8 prompts
+        with cols[idx % 2]:
+            if st.button(prompt, key=f"prompt_{idx}", use_container_width=True):
+                st.session_state.messages.append({"role": "user", "content": prompt})
+                with st.spinner("🤔 Thinking..."):
+                    response = get_ai_response(
+                        prompt, 
+                        st.session_state.selected_feature,
+                        st.session_state.messages
+                    )
+                st.session_state.messages.append({"role": "assistant", "content": response})
+                st.rerun()
 
 # =============================================================================
-# ROUTES
+# MAIN APP
 # =============================================================================
 
-@app.route('/')
-def index():
-    """Render main page"""
-    return render_template_string(
-        HTML_TEMPLATE, 
-        features=FEATURES,
-        sample_prompts=SAMPLE_PROMPTS
+def main():
+    render_header()
+    render_sidebar()
+    
+    # Chat interface
+    st.markdown("### 💬 Chat with AgroNova")
+    
+    # Display chat messages
+    chat_container = st.container()
+    with chat_container:
+        for message in st.session_state.messages:
+            if message["role"] == "user":
+                st.markdown(f"""
+                <div style="text-align: right;">
+                    <div class="user-message" style="display: inline-block; max-width: 80%;">
+                        {message["content"]}
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+            else:
+                st.markdown(f"""
+                <div class="assistant-message">
+                    {message["content"]}
+                </div>
+                """, unsafe_allow_html=True)
+    
+    # Chat input
+    st.markdown("---")
+    user_input = st.text_area(
+        "Ask me anything about farming...",
+        key="user_input",
+        placeholder="e.g., What crops should I grow in July in Tamil Nadu?",
+        height=100
     )
-
-@app.route('/chat', methods=['POST'])
-def chat():
-    """Handle chat messages"""
-    try:
-        data = request.json
-        user_message = data.get('message', '')
-        feature = data.get('feature')
-        history = data.get('history', [])
-        
-        if not user_message:
-            return jsonify({'error': 'No message provided'}), 400
+    
+    col1, col2 = st.columns([6, 1])
+    with col2:
+        send_button = st.button("Send 📤", use_container_width=True, type="primary")
+    
+    if send_button and user_input.strip():
+        # Add user message
+        st.session_state.messages.append({"role": "user", "content": user_input})
         
         # Generate AI response
-        ai_response = get_ai_response(user_message, feature, history)
+        with st.spinner("🤔 Thinking..."):
+            response = get_ai_response(
+                user_input,
+                st.session_state.selected_feature,
+                st.session_state.messages
+            )
         
-        return jsonify({
-            'response': ai_response,
-            'timestamp': datetime.now().isoformat()
-        })
+        # Add assistant response
+        st.session_state.messages.append({"role": "assistant", "content": response})
         
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-# =============================================================================
-# MAIN
-# =============================================================================
-
-if __name__ == '__main__':
-    print("=" * 70)
-    print("🌾 AgroNova Smart Farming Assistant")
-    print("=" * 70)
-    print(f"\n✅ Server starting...")
-    print(f"🌐 Open your browser and go to: http://localhost:5000")
-    print(f"\n⚠️  Important: Make sure to add your Gemini API key in the code!")
-    print(f"   Look for: app_key = 'YOUR_GEMINI_API_KEY_HERE'")
-    print(f"\n📝 Press Ctrl+C to stop the server")
-    print("=" * 70)
+        # Rerun to update chat
+        st.rerun()
     
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    # Sample prompts
+    st.markdown("---")
+    render_sample_prompts()
+    
+    # Clear chat button
+    if len(st.session_state.messages) > 1:
+        if st.button("🗑️ Clear Chat History"):
+            st.session_state.messages = [st.session_state.messages[0]]  # Keep welcome message
+            st.rerun()
+
+if __name__ == "__main__":
+    main()
