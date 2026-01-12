@@ -207,7 +207,7 @@ if "messages" not in st.session_state:
     st.session_state.messages = [
         {
             "role": "assistant",
-            "content": """Welcome to **AgroNova Smart Farming Assistant**! 🌾
+            "content": """Welcome to AgroNova Smart Farming Assistant! 🌾
 
 I'm here to help farmers worldwide with AI-powered agricultural advice. Ask me about crops, pests, weather, soil, or sustainable farming practices in your region.
 
