@@ -1,5 +1,5 @@
 """
-Smart Farming Assistant - Streamlit Application
+Smart Farming Assistant - Streamlit Application (Pure Python Version)
 Powered by Google Gemini AI
 
 Installation:
@@ -28,80 +28,15 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS
-st.markdown("""
-<style>
-    .main-header {
-        background: linear-gradient(135deg, #059669 0%, #10b981 100%);
-        padding: 1.5rem;
-        border-radius: 10px;
-        margin-bottom: 2rem;
-        color: white;
-    }
-    .feature-card {
-        padding: 1rem;
-        border-radius: 8px;
-        border: 2px solid #e5e7eb;
-        cursor: pointer;
-        transition: all 0.3s;
-        margin-bottom: 0.5rem;
-    }
-    .feature-card:hover {
-        border-color: #10b981;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-    }
-    .feature-card-selected {
-        border-color: #059669;
-        background-color: #ecfdf5;
-    }
-    .user-message {
-        background-color: #059669;
-        color: white;
-        padding: 1rem;
-        border-radius: 1rem;
-        margin: 0.5rem 0;
-    }
-    .assistant-message {
-        background-color: #f3f4f6;
-        color: #1f2937;
-        padding: 1rem;
-        border-radius: 1rem;
-        margin: 0.5rem 0;
-    }
-    .sample-prompt-btn {
-        background-color: white;
-        border: 1px solid #d1d5db;
-        padding: 0.5rem 1rem;
-        border-radius: 0.5rem;
-        margin: 0.25rem;
-        cursor: pointer;
-        transition: all 0.2s;
-    }
-    .sample-prompt-btn:hover {
-        border-color: #10b981;
-        background-color: #ecfdf5;
-    }
-    .stButton>button {
-        background-color: #059669;
-        color: white;
-    }
-    .stButton>button:hover {
-        background-color: #047857;
-    }
-</style>
-""", unsafe_allow_html=True)
-
 # =============================================================================
 # CONFIGURATION - USING STREAMLIT SECRETS
 # =============================================================================
 try:
-    # Access API key from Streamlit secrets
     app_key = st.secrets["GEMINI_API_KEY"]
     genai.configure(api_key=app_key)
 except Exception as e:
-    st.error("""
-    ⚠️ **Gemini API Key Not Found!**
-    
+    st.error("⚠️ **Gemini API Key Not Found!**")
+    st.info("""
     Please add your API key to Streamlit secrets:
     
     **For local development:**
@@ -266,10 +201,8 @@ Keep responses concise but comprehensive, typically 200-400 words unless detaile
 def get_ai_response(user_message, feature=None, _chat_history=None):
     """Generate AI response using Gemini API"""
     try:
-        # Build conversation history
         conversation = []
         
-        # Add system context
         system_prompt = generate_system_prompt(feature)
         conversation.append({
             "role": "user",
@@ -280,7 +213,6 @@ def get_ai_response(user_message, feature=None, _chat_history=None):
             "parts": ["I understand. I'm AgroNova, your agricultural assistant. I'll provide practical, region-specific farming advice with clear formatting and actionable steps."]
         })
         
-        # Add chat history if provided (last 6 messages for context)
         if _chat_history:
             for msg in _chat_history[-6:]:
                 role = "user" if msg["role"] == "user" else "model"
@@ -289,7 +221,6 @@ def get_ai_response(user_message, feature=None, _chat_history=None):
                     "parts": [msg["content"]]
                 })
         
-        # Start chat and send message
         chat = model.start_chat(history=conversation)
         response = chat.send_message(user_message)
         
@@ -313,73 +244,74 @@ Error details: {str(e)}"""
 
 
 # =============================================================================
-# UI COMPONENTS
+# UI COMPONENTS (PURE PYTHON)
 # =============================================================================
 
 def render_header():
-    """Render the header"""
-    st.markdown("""
-    <div class="main-header">
-        <h1 style="margin:0; font-size: 2rem;">🌾 AgroNova</h1>
-        <p style="margin:0; opacity: 0.9;">Smart Farming Assistant powered by Gemini AI</p>
-    </div>
-    """, unsafe_allow_html=True)
+    """Render the header using native Streamlit components"""
+    # Create a colored container using columns and containers
+    header_container = st.container()
+    with header_container:
+        st.markdown("# 🌾 AgroNova")
+        st.markdown("#### Smart Farming Assistant powered by Gemini AI")
+        st.markdown("---")
 
 def render_sidebar():
     """Render the sidebar with features"""
     with st.sidebar:
         st.markdown("### 📋 Features")
-        st.markdown("Select a feature to get specialized advice:")
+        st.caption("Select a feature to get specialized advice:")
         
         for feature in FEATURES:
             is_selected = st.session_state.selected_feature == feature["id"]
             
-            button_class = "feature-card-selected" if is_selected else ""
-            
-            if st.button(
-                f"{feature['title']}\n{feature['description']}", 
-                key=feature["id"],
-                use_container_width=True,
-                type="primary" if is_selected else "secondary"
-            ):
-                st.session_state.selected_feature = feature["id"]
-                st.rerun()
+            # Create a container for each feature
+            with st.container():
+                if st.button(
+                    feature['title'],
+                    key=feature["id"],
+                    use_container_width=True,
+                    type="primary" if is_selected else "secondary",
+                    help=feature['description']
+                ):
+                    st.session_state.selected_feature = feature["id"]
+                    st.rerun()
+                
+                if is_selected:
+                    st.success(feature['description'])
+                else:
+                    st.caption(feature['description'])
         
         if st.session_state.selected_feature:
+            st.markdown("")
             if st.button("🔄 Clear Selection", use_container_width=True):
                 st.session_state.selected_feature = None
                 st.rerun()
         
-        st.markdown("---")
-        st.markdown("""
-        ### 🌍 Global Coverage
-        Get region-specific advice for farming practices worldwide. 
-        Supporting farmers in India, Kenya, Brazil, Italy, and more!
-        """)
+        st.divider()
         
-        st.markdown("---")
-        st.markdown("""
-        ### ℹ️ About
-        Supporting UN SDG 2 (Zero Hunger) & SDG 13 (Climate Action)
+        st.markdown("### 🌍 Global Coverage")
+        st.info("Get region-specific advice for farming practices worldwide. Supporting farmers in India, Kenya, Brazil, Italy, and more!")
         
-        Built with Streamlit & Gemini AI
-        """)
+        st.divider()
+        
+        st.markdown("### ℹ️ About")
+        st.caption("Supporting UN SDG 2 (Zero Hunger) & SDG 13 (Climate Action)")
+        st.caption("Built with Streamlit & Gemini AI")
 
 def render_sample_prompts():
-    """Render sample prompts"""
+    """Render sample prompts using native Streamlit components"""
     st.markdown("### ✨ Try These Sample Questions")
     
-    # Get prompts based on selected feature
     if st.session_state.selected_feature:
         prompts = SAMPLE_PROMPTS.get(st.session_state.selected_feature, [])
     else:
-        # Show all prompts
         prompts = []
         for prompt_list in SAMPLE_PROMPTS.values():
-            prompts.extend(prompt_list[:2])  # Take 2 from each category
+            prompts.extend(prompt_list[:2])
     
     cols = st.columns(2)
-    for idx, prompt in enumerate(prompts[:8]):  # Show max 8 prompts
+    for idx, prompt in enumerate(prompts[:8]):
         with cols[idx % 2]:
             if st.button(prompt, key=f"prompt_{idx}", use_container_width=True):
                 st.session_state.messages.append({"role": "user", "content": prompt})
@@ -403,27 +335,20 @@ def main():
     # Chat interface
     st.markdown("### 💬 Chat with AgroNova")
     
-    # Display chat messages
+    # Display chat messages using native Streamlit chat components
     chat_container = st.container()
     with chat_container:
         for message in st.session_state.messages:
             if message["role"] == "user":
-                st.markdown(f"""
-                <div style="text-align: right;">
-                    <div class="user-message" style="display: inline-block; max-width: 80%;">
-                        {message["content"]}
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
+                with st.chat_message("user", avatar="👤"):
+                    st.write(message["content"])
             else:
-                st.markdown(f"""
-                <div class="assistant-message">
-                    {message["content"]}
-                </div>
-                """, unsafe_allow_html=True)
+                with st.chat_message("assistant", avatar="🌾"):
+                    st.write(message["content"])
     
     # Chat input
-    st.markdown("---")
+    st.divider()
+    
     user_input = st.text_area(
         "Ask me anything about farming...",
         key="user_input",
@@ -436,10 +361,8 @@ def main():
         send_button = st.button("Send 📤", use_container_width=True, type="primary")
     
     if send_button and user_input.strip():
-        # Add user message
         st.session_state.messages.append({"role": "user", "content": user_input})
         
-        # Generate AI response
         with st.spinner("🤔 Thinking..."):
             response = get_ai_response(
                 user_input,
@@ -447,20 +370,18 @@ def main():
                 st.session_state.messages
             )
         
-        # Add assistant response
         st.session_state.messages.append({"role": "assistant", "content": response})
-        
-        # Rerun to update chat
         st.rerun()
     
     # Sample prompts
-    st.markdown("---")
+    st.divider()
     render_sample_prompts()
     
     # Clear chat button
     if len(st.session_state.messages) > 1:
-        if st.button("🗑️ Clear Chat History"):
-            st.session_state.messages = [st.session_state.messages[0]]  # Keep welcome message
+        st.divider()
+        if st.button("🗑️ Clear Chat History", type="secondary"):
+            st.session_state.messages = [st.session_state.messages[0]]
             st.rerun()
 
 if __name__ == "__main__":
