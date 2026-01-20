@@ -97,7 +97,7 @@ st.markdown("""
 try:
     # Access API key from Streamlit secrets
     app_key = st.secrets["GEMINI_API_KEY"]
-    genai.configure(api_key=GEMINI_API_KEY)
+    genai.configure(api_key=app_key)
 except Exception as e:
     st.error("""
     ⚠️ **Gemini API Key Not Found!**
@@ -125,7 +125,7 @@ generation_config = {
 }
 
 model = genai.GenerativeModel(
-    model_name="gemini-1.5-flash",
+    model_name="gemini-2.5-flash",
     generation_config=generation_config,
 )
 
